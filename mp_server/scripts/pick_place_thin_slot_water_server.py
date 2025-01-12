@@ -10,7 +10,7 @@ from moveit_commander.conversions import pose_to_list
 from geometry_msgs.msg import PointStamped, Pose, PoseStamped
 from tf.transformations import quaternion_from_euler, quaternion_multiply
 from std_srvs.srv import SetBool
-from create_2025_mp_server_msgs.msg import PickPlaceAction, PickPlaceActionGoal, PickPlaceActionResult
+from mp_server_msgs.msg import PickPlaceAction, PickPlaceActionGoal, PickPlaceActionResult
 import actionlib
 from ur_msgs.srv import SetIO
 

@@ -10,13 +10,13 @@ from moveit_commander.conversions import pose_to_list
 from geometry_msgs.msg import PointStamped, Pose
 from tf.transformations import quaternion_from_euler, quaternion_multiply
 from std_srvs.srv import SetBool
-from create_2025_mp_server_msgs.msg import PickPlaceAction, PickPlaceActionGoal, PickPlaceActionResult
-from create_2025_mp_server_msgs.msg import MovePreactionAction, MovePreactionActionGoal, MovePreactionActionResult
+from mp_server_msgs.msg import PickPlaceAction, PickPlaceActionGoal, PickPlaceActionResult
+from mp_server_msgs.msg import MovePreactionAction, MovePreactionActionGoal, MovePreactionActionResult
 import actionlib
 
-## create 6 literals for joint states ###
-JOINT_STATE = [4.662384033203125, -1.3527657252601166, -1.9796059131622314, -1.3579523873380204, 1.5604232549667358, 0.984982430934906]
 
+## create 6 literals for joint states ###
+JOINT_STATE = [-0.9251669088946741, -1.8753506145873011, -0.41923972964286804, -2.3929034672179164, 1.9057989120483398, -3.3745108286487024]
 
 class Motion_planner:
 
@@ -27,7 +27,7 @@ class Motion_planner:
         self.robot = moveit_commander.RobotCommander()
         self.scene = moveit_commander.PlanningSceneInterface()
 
-        self.group_name = "right_arm"
+        self.group_name = "left_arm"
         self.move_group = moveit_commander.MoveGroupCommander(self.group_name)
 
         self.display_trajectory_publisher = rospy.Publisher(
@@ -44,7 +44,7 @@ class Motion_planner:
 
         # create an action server for move preaction
         self.move_preaction_server = actionlib.SimpleActionServer(
-            "right_move_preaction", MovePreactionAction, self.move_preaction_callback, auto_start=False
+            "left_move_preaction", MovePreactionAction, self.move_preaction_callback, auto_start=False
         )
 
         self.move_preaction_server.start()
@@ -74,7 +74,7 @@ class Motion_planner:
         return True
         
 if __name__  == "__main__":
-    rospy.init_node("right_preaction_server", anonymous=True)
+    rospy.init_node("left_preaction_server", anonymous=True)
     mp = Motion_planner()
     rospy.spin()
     moveit_commander.roscpp_shutdown()

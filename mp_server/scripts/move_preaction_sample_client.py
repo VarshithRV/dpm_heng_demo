@@ -2,8 +2,8 @@
 
 import rospy
 from geometry_msgs.msg import PointStamped
-from create_2025_mp_server_msgs.msg import PickPlaceAction, PickPlaceGoal, PickPlaceResult
-from create_2025_mp_server_msgs.msg import MovePreactionAction, MovePreactionActionGoal, MovePreactionActionResult
+from mp_server_msgs.msg import PickPlaceAction, PickPlaceGoal, PickPlaceResult
+from mp_server_msgs.msg import MovePreactionAction, MovePreactionActionGoal, MovePreactionActionResult
 import actionlib
 
 class MpClass:

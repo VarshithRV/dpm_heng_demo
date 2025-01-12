@@ -1,8 +1,5 @@
 <?xml version="1.0"?>
 <launch>
-    <!-- <include file="$(find realsense2_camera)/launch/rs_aligned_depth.launch">
-        <arg name="enable_pointcloud" value="true"/>
-    </include> -->
 
     <!-- dual_arm_control.launch -->
     <include file="$(find ur16e_dual_arm_control)/launch/dual_arm_control.launch"/>
@@ -18,7 +15,7 @@
     <node pkg="topic_tools" type="relay" name="relay_right_joint_states" args="/right/joint_states /joint_states"/>
 
     <!-- add cameras here -->
-    <include file="$(find ur16e_dual_arm_bringup)/launch/left_arm_camera_transformation.launch"/>
+    <!-- <include file="$(find ur16e_dual_arm_bringup)/launch/left_arm_camera_transformation.launch"/> -->
     <!-- <include file="$(find ur16e_dual_arm_bringup)/launch/right_arm_camera_transformation.launch"/> -->
 
 </launch>
