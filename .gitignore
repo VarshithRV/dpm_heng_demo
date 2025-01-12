@@ -1,0 +1,5 @@
+GroundingDINO/
+open_set_object_detection/scripts/weights/
+open_set_object_detection/scripts/*.pt*
+build/*
+segment_anything/
