@@ -3,6 +3,7 @@ import copy
 import rospy
 import moveit_commander
 import moveit_msgs.msg
+from std_msgs.msg import String
 import geometry_msgs.msg
 from math import pi, tau, dist, fabs, cos
 from std_msgs.msg import String
@@ -10,7 +11,8 @@ from moveit_commander.conversions import pose_to_list
 from geometry_msgs.msg import PointStamped, Pose, PoseStamped
 from tf.transformations import quaternion_from_euler, quaternion_multiply
 from std_srvs.srv import SetBool
-from mp_server_msgs.msg import PickPlaceAction, PickPlaceActionGoal, PickPlaceActionResult
+from mp_server_msgs.msg import PerceivePickPlaceAction, PerceivePickPlaceActionGoal, PerceivePickPlaceActionResult
+from open_set_object_detection_msgs.srv import GetObjectLocations, GetObjectLocationsRequest, GetObjectLocationsResponse
 import actionlib
 from ur_msgs.srv import SetIO
 
@@ -59,29 +61,61 @@ class Motion_planner:
             queue_size=20,
         )
 
+        self.secondary_perception = rospy.ServiceProxy("secondary_perception_azure",GetObjectLocations)
+
+
         self.waypoints = []
 
         # create action server for pick and place
         self.pick_place_server = actionlib.SimpleActionServer(
-            "left_pick_place", PickPlaceAction, self.pick_place_callback, auto_start=False
+            "left_pick_place", PerceivePickPlaceAction, self.pick_place_callback, auto_start=False
         )
 
+        
         # create a service client for /left/ur_hardware_interface/set_io
         self.set_io_client = rospy.ServiceProxy("/left/ur_hardware_interface/set_io", SetIO)
         self.set_io_client.wait_for_service()
         self.pick_place_server.start()
 
+    def execute_waypoints(self, waypoints):
+        rospy.loginfo("#################################")
+        rospy.loginfo("Waypoints : %s", waypoints)
 
+        # plan a cartesian path
+        try : 
+            (plan, fraction) = self.move_group.compute_cartesian_path(
+                waypoints,  # waypoints to follow
+                0.005,  # eef_step
+            )
+        except Exception as e:
+            print(e)
+            return False
 
-    def pick_place_callback(self, goal:PickPlaceActionGoal):
+        # display the plan
+        display_trajectory = moveit_msgs.msg.DisplayTrajectory()
+        display_trajectory.trajectory_start = self.robot.get_current_state()
+        display_trajectory.trajectory.append(plan)
+        self.display_trajectory_publisher.publish(display_trajectory)
+
+        # execute the plan
+        rospy.loginfo("Executing prepick")
+        try : 
+            self.move_group.execute(plan, wait=True)
+            self.move_group.stop()
+        except Exception as e:
+            print(e)
+            return False
+
+    def pick_place_callback(self, goal:PerceivePickPlaceActionGoal):
         rospy.loginfo("Received pick and place goal")
         start = goal.source
         end = goal.destination
+        prompt = goal.prompt
         
-        success = self.pick_and_place(start, end)
+        success = self.pick_and_place(start, end, prompt)
         
         # set goal to success
-        result = PickPlaceActionResult()
+        result = PerceivePickPlaceActionResult()
         result.result = success
 
         if success:
@@ -90,7 +124,7 @@ class Motion_planner:
             self.pick_place_server.set_aborted(result)
 
 
-    def pick_and_place(self,start:PoseStamped, end:PoseStamped):
+    def pick_and_place(self,start:PoseStamped, end:PoseStamped, prompt:String):
         rospy.loginfo("Started pick and place with start : %s and end : %s", start, end)
 
         start.pose.position.x += PADDING_X
@@ -101,123 +135,133 @@ class Motion_planner:
         end.pose.position.y += PADDING_Y
         end.pose.position.z += PADDING_Z
 
-        start.pose.orientation.x= -0.35862806853220586
-        start.pose.orientation.y= -0.9334403528397598
-        start.pose.orientation.z= -0.0036593492588516663
-        start.pose.orientation.w= 0.007850179249297016
+        start.pose.orientation.x= -0.6616999071882411
+        start.pose.orientation.y= 0.7497530177608279
+        start.pose.orientation.z= -0.0005646905747994222
+        start.pose.orientation.w= 0.004829731893122736
 
 
-        end.pose.orientation.x= -0.35862806853220586
-        end.pose.orientation.y= -0.9334403528397598
-        end.pose.orientation.z= -0.0036593492588516663
-        end.pose.orientation.w= 0.007850179249297016
+        end.pose.orientation.x= -0.6616999071882411
+        end.pose.orientation.y= 0.7497530177608279
+        end.pose.orientation.z= -0.0005646905747994222
+        end.pose.orientation.w= 0.004829731893122736
 
-        # plan a cartesian path to pick, prepick -> pick
+        # start and end pose are configured with 0 linear transformation and fixed orientation
+
+        pick_place_height = 0.30
+
+        observe_height = 0.20
+
+        # pick routine : start -> prepick -> observe_pos -> observe -> pick
         waypoints = []
         initial_pose = self.move_group.get_current_pose().pose
         prepick = Pose()
-        prepick = start.pose
-        prepick.position.z += 0.2# move up 20 cm
+        prepick = copy.deepcopy(start.pose)
+        prepick.position.z = pick_place_height
         waypoints.append(copy.deepcopy(initial_pose))
         waypoints.append(copy.deepcopy(prepick))
-        
-        pick = copy.deepcopy(prepick)
-        pick.position.z -= 0.2 # move down 10 cm
+        self.execute_waypoints(waypoints)
+        rospy.sleep(0.2)
+
+        waypoints = []
+        current_pose = self.move_group.get_current_pose().pose
+        observe_pose = copy.deepcopy(current_pose)
+        observe_pose.position.z = observe_height
+        waypoints.append(copy.deepcopy(current_pose))
+        waypoints.append(copy.deepcopy(observe_pose))
+        self.execute_waypoints(waypoints)
+        rospy.sleep(0.2)
+
+        msg = GetObjectLocationsRequest()
+        msg.prompt = prompt
+        response = self.secondary_perception(msg)
+        pick_pose = response.result.object_position[0].pose
+
+        if pick_pose is not None:
+            pass
+        else :
+            print("pick_pose empty, exiting")
+            return
+
+        waypoints = []
+        current_pose = self.move_group.get_current_pose().pose
+        prepick2 = copy.deepcopy(pick_pose.pose)
+        prepick2.orientation = start.orientation
+        prepick2.position.z = pick_place_height
+        waypoints.append(copy.deepcopy(current_pose))
+        waypoints.append(copy.deepcopy(prepick2))
+        self.execute_waypoints(waypoints)
+        rospy.sleep(0.2)
+
+        waypoints = []
+        pick = copy.deepcopy(pick_pose.pose)
+        pick.orientation = start.orientation
         waypoints.append(copy.deepcopy(pick))
-
-        rospy.loginfo("#################################")
-        rospy.loginfo("Waypoints : %s", waypoints)
-        # plan a cartesian path
-        try : 
-            (plan, fraction) = self.move_group.compute_cartesian_path(
-                waypoints,  # waypoints to follow
-                0.005,  # eef_step
-            )
-        except Exception as e:
-            print(e)
-            return False
-
-        # display the plan
-        display_trajectory = moveit_msgs.msg.DisplayTrajectory()
-        display_trajectory.trajectory_start = self.robot.get_current_state()
-        display_trajectory.trajectory.append(plan)
-        self.display_trajectory_publisher.publish(display_trajectory)
-
-        # execute the plan
-        rospy.loginfo("Executing prepick -> pick plan")
-        try : 
-            self.move_group.execute(plan, wait=True)
-            self.move_group.stop()
-        except Exception as e:
-            print(e)
-            return False
+        self.execute_waypoints(waypoints) # here it as at pick at the same position as the one provided in the client
 
         rospy.sleep(1)
-
         # activate the gripper here
         rospy.loginfo("Activating gripper")
-        try : 
-            self.set_io_client(1, 12, 1)
-            self.set_io_client(1, 13, 1)
-        except Exception as e:
-            print(e)
-            return
+        self.set_io_client(1,12,1)
         rospy.sleep(1)
 
-        # plan cartesian path to prepick -> place
+        # plan cartesian path to pick -> prepick -> preplace
+        waypoints = []
+        current_pose = self.move_group.get_current_pose().pose
+        waypoints.append(copy.deepcopy(current_pose))
+        waypoints.append(copy.deepcopy(prepick2))
+        self.execute_waypoints(waypoints)
+        rospy.sleep(0.2)
+
         waypoints = []
         current_pose = self.move_group.get_current_pose().pose
         waypoints.append(copy.deepcopy(current_pose))
         waypoints.append(copy.deepcopy(prepick))
+        self.execute_waypoints(waypoints)
+        rospy.sleep(0.2)
+        
+        waypoints = []
         preplace = Pose()
-        preplace = end.pose
-        # move up 20 cm
-        preplace.position.z += 0.20
+        preplace = copy.deepcopy(end.pose)
+        preplace.position.z = pick_place_height
         waypoints.append(copy.deepcopy(preplace))
-        place = copy.deepcopy(preplace)
-        place.position.z -= 0.25
+        self.execute_waypoints(waypoints)
+        rospy.sleep(0.2)
+
+        waypoints = []
+        preplace2 = Pose()
+        preplace2 = copy.deepcopy(preplace)
+        preplace2.position.z = pick_place_height - 0.1
+        waypoints.append(copy.deepcopy(preplace2))
+        self.execute_waypoints(waypoints)
+        rospy.sleep(0.2)
+
+        waypoints = []
+        place = copy.deepcopy(end.pose)
         waypoints.append(copy.deepcopy(place))
 
-        rospy.loginfo("#################################")
-        rospy.loginfo("Waypoints : %s", waypoints)
+        self.execute_waypoints(waypoints)
         
-        # plan a cartesian path
-        try : 
-            (plan, fraction) = self.move_group.compute_cartesian_path(
-                waypoints,  # waypoints to follow
-                0.005,  # eef_step
-            )
-        except Exception as e:
-            print(e)
-            return False
-
-        # display the plan
-        display_trajectory = moveit_msgs.msg.DisplayTrajectory()
-        display_trajectory.trajectory_start = self.robot.get_current_state()
-        display_trajectory.trajectory.append(plan)
-        self.display_trajectory_publisher.publish(display_trajectory)
-
-
-        # execute the plan
-        rospy.loginfo("Executing prepick -> place plan")
-        try : 
-            self.move_group.execute(plan, wait=True)
-            self.move_group.stop()
-        except Exception as e:
-            print(e)
-            return False
-
         rospy.sleep(1)
-        
+
         # deactivate the gripper here
         waypoints = []
         rospy.loginfo("Deactivating gripper")
-        try : 
-            self.set_io_client(1, 12, 0)
-            self.set_io_client(1, 13, 0)
-        except Exception as e:
-            print(e)
-            return
+        self.set_io_client(1,12,0)
+
+        rospy.sleep(1)
+
+        waypoints = []
+        current_pose = self.move_group.get_current_pose().pose
+        waypoints.append(copy.deepcopy(current_pose))
+        waypoints.append(copy.deepcopy(preplace2))
+        self.execute_waypoints(waypoints)
+
+        waypoints = []
+        current_pose = self.move_group.get_current_pose().pose
+        waypoints.append(copy.deepcopy(current_pose))
+        waypoints.append(copy.deepcopy(preplace))
+        self.execute_waypoints(waypoints)
 
         return True
         

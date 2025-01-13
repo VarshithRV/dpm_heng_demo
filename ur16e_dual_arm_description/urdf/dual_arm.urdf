@@ -361,7 +361,7 @@
         <collision>
             <origin xyz="0 0 0" rpy="0 0 0" />
             <geometry>
-                <cylinder radius="0.05" length="0.1" />
+                <cylinder radius="0.05" length="0.22" />
             </geometry>
             <material name="Blue">
                 <color rgba="0 0 1 1" />
@@ -370,7 +370,7 @@
         <visual>
             <origin xyz="0 0 0" rpy="0 0 0" />
             <geometry>
-                <cylinder radius="0.05" length="0.1" />
+                <cylinder radius="0.05" length="0.22" />
             </geometry>
             <material name="Blue">
                 <color rgba="0 0 1 1" />
@@ -386,13 +386,13 @@
     <joint name="left_wrist_3_link-suction_gripper" type="fixed">
         <parent link="left_wrist_3_link" />
         <child link="left_suction_gripper" />
-        <origin rpy="0 0 0" xyz="0 0 0.05" />
+        <origin rpy="0 0 0" xyz="0 0 0.11" />
     </joint>
     <link name="left_suction_gripper_poi" />
     <joint name="left_suction_gripper-poi" type="fixed">
         <parent link="left_suction_gripper" />
         <child link="left_suction_gripper_poi" />
-        <origin rpy="0 0 0" xyz="0 0 0.05" />
+        <origin rpy="0 0 0" xyz="0 0 0.11" />
     </joint>
     <!-- ROS-Industrial 'tool0' frame: all-zeros tool frame -->
     <link name="left_tool0" />
@@ -750,7 +750,7 @@
         <collision>
             <origin xyz="0 0 0" rpy="0 0 0" />
             <geometry>
-                <cylinder radius="0.05" length="0.1" />
+                <cylinder radius="0.05" length="0.14" />
             </geometry>
             <material name="Red">
                 <color rgba="1 0 0 1" />
@@ -759,7 +759,7 @@
         <visual>
             <origin xyz="0 0 0" rpy="0 0 0" />
             <geometry>
-                <cylinder radius="0.05" length="0.1" />
+                <cylinder radius="0.05" length="0.14" />
             </geometry>
             <material name="Red">
                 <color rgba="1 0 0 1" />
@@ -775,13 +775,13 @@
     <joint name="right_wrist_3_link-_rws_gripper" type="fixed">
         <parent link="right_wrist_3_link" />
         <child link="right_rws_gripper" />
-        <origin rpy="0 0 0" xyz="0 0 0.05" />
+        <origin rpy="0 0 0" xyz="0 0 0.07" />
     </joint>
     <link name="right_rws_gripper_poi" />
     <joint name="right_rws_gripper-poi" type="fixed">
         <parent link="right_rws_gripper" />
         <child link="right_rws_gripper_poi" />
-        <origin rpy="0 0 0" xyz="0 0 0.05" />
+        <origin rpy="0 0 0" xyz="0 0 0.07" />
     </joint>
     <!-- ROS-Industrial 'flange' frame: attachment point for EEF models -->
     <link name="right_flange" />

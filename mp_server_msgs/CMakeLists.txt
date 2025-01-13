@@ -71,13 +71,14 @@ add_action_files(
   action
   FILES
   PickPlace.action
+  PerceivePickPlace.action
   MovePreaction.action
 )
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-  actionlib_msgs geometry_msgs
+  actionlib_msgs geometry_msgs std_msgs
 )
 
 ################################################

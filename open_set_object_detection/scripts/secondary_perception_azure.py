@@ -174,7 +174,7 @@ class Deprojection:
         
         # save the current image as a source image
         # change the image from bgr to rgb
-        self.color_image = cv2.cvtColor(self.color_image, cv2.COLOR_BGR2RGB)
+        # self.color_image = cv2.cvtColor(self.color_image, cv2.COLOR_BGR2RGB)
         cv2.imwrite(self.source_image_path, self.color_image)
 
         # execute Grounding Dino here to get the bounding boxes based on the prompt
@@ -195,7 +195,7 @@ class Deprojection:
         annotated_frame = self.annotate(image_source=image_source, boxes=boxes, logits=logits, phrases=phrases)
         cv2.imwrite("inference_images/annotated_image.jpg", annotated_frame)
 
-        result = ObjectPositions()
+        intermediate_result = ObjectPositions()
 
         h, w, _ = image_source.shape
         boxes = boxes * torch.Tensor([w, h, w, h])
@@ -221,49 +221,72 @@ class Deprojection:
         print("########################")
 
 
-        # # PREPARE THE RESULT OBJECT HERE
-        # for i in range(len(phrases)):
-        #     object_position = ObjectPosition()
-        #     object_position.id = i
-        #     object_position.Class = phrases[i]
-        #     x = int((xyxy[i][0] + xyxy[i][2]) /2)
-        #     y = int((xyxy[i][1] + xyxy[i][3]) /2)
-        #     pose = self.get_3d_position(x, y)
-        #     if pose is None:
-        #         return
-        #     object_position.pose = pose
-        #     object_position.x_min = xyxy[i][0]
-        #     object_position.y_min = xyxy[i][1]
-        #     object_position.x_max = xyxy[i][2]
-        #     object_position.y_max = xyxy[i][3]
-        #     result.object_position.append(object_position)
-
-        # maximize x^2 + y^2 distance
-        max_distance = -1
-        max_index = -1
-
+        # PREPARE THE RESULT OBJECT HERE
         for i in range(len(phrases)):
-            x = int((xyxy[i][0] + xyxy[i][2]) / 2)
-            y = int((xyxy[i][1] + xyxy[i][3]) / 2)
-            distance = x**2 + y**2
-            if distance > max_distance:
-                max_distance = distance
-            max_index = i
-
-        if max_index != -1:
             object_position = ObjectPosition()
-            object_position.id = max_index
-            object_position.Class = phrases[max_index]
-            x = int((xyxy[max_index][0] + xyxy[max_index][2]) / 2)
-            y = int((xyxy[max_index][1] + xyxy[max_index][3]) / 2)
+            object_position.id = i
+            object_position.Class = phrases[i]
+            x = int((xyxy[i][0] + xyxy[i][2]) /2)
+            y = int((xyxy[i][1] + xyxy[i][3]) /2)
             pose = self.get_3d_position(x, y)
-            if pose is not None:
-                object_position.pose = pose
-                object_position.x_min = xyxy[max_index][0]
-                object_position.y_min = xyxy[max_index][1]
-                object_position.x_max = xyxy[max_index][2]
-                object_position.y_max = xyxy[max_index][3]
-                result.object_position.append(object_position)
+            if pose is None:
+                return
+            object_position.pose = pose
+            object_position.x_min = xyxy[i][0]
+            object_position.y_min = xyxy[i][1]
+            object_position.x_max = xyxy[i][2]
+            object_position.y_max = xyxy[i][3]
+            intermediate_result.object_position.append(object_position)
+
+        result = ObjectPositions()
+
+        # parse through the intermediate, append only the object_position with largest (object_position.pose.position.x)^2 + (object_position.pose.position.y)^2
+        least_x = 20
+        max_object_position = None
+
+        for obj_pos in intermediate_result.object_position:
+            x = obj_pos.pose.pose.position.x
+            if x < least_x:
+                least_x = x
+                max_object_position = obj_pos
+
+        if max_object_position is not None:
+            result.object_position.append(max_object_position)
+
+        # Draw a point on the chosen object in the annotated image
+        if max_object_position is not None:
+            center_x = int((max_object_position.x_min + max_object_position.x_max) / 2)
+            center_y = int((max_object_position.y_min + max_object_position.y_max) / 2)
+            cv2.circle(annotated_frame, (center_x, center_y), radius=5, color=(0, 0, 255), thickness=-1)
+        
+        cv2.imwrite("inference_images/annotated_image_selected.jpg", annotated_frame)
+
+        # # maximize x^2 + y^2 distance
+        # max_distance = -1
+        # max_index = -1
+
+        # for i in range(len(phrases)):
+        #     x = int((xyxy[i][0] + xyxy[i][2]) / 2)
+        #     y = int((xyxy[i][1] + xyxy[i][3]) / 2)
+        #     distance = x**2 + y**2
+        #     if distance > max_distance:
+        #         max_distance = distance
+        #     max_index = i
+
+        # if max_index != -1:
+        #     object_position = ObjectPosition()
+        #     object_position.id = max_index
+        #     object_position.Class = phrases[max_index]
+        #     x = int((xyxy[max_index][0] + xyxy[max_index][2]) / 2)
+        #     y = int((xyxy[max_index][1] + xyxy[max_index][3]) / 2)
+        #     pose = self.get_3d_position(x, y)
+        #     if pose is not None:
+        #         object_position.pose = pose
+        #         object_position.x_min = xyxy[max_index][0]
+        #         object_position.y_min = xyxy[max_index][1]
+        #         object_position.x_max = xyxy[max_index][2]
+        #         object_position.y_max = xyxy[max_index][3]
+        #         result.object_position.append(object_position)
 
         result.image = self.cv_bridge.cv2_to_imgmsg(annotated_frame, encoding="bgr8")
         self.latest_result = result

@@ -143,7 +143,7 @@ class Motion_planner:
 
         # start and end pose are configured with 0 linear transformation and fixed orientation
 
-        pick_place_height = 0.4271641690575525
+        pick_place_height = 0.20
 
         # plan a cartesian path to pick, prepick -> pick
         waypoints = []
