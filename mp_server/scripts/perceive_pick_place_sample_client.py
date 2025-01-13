@@ -20,9 +20,9 @@ if __name__ == "__main__":
     mp = MpClass()
 
     source = PoseStamped()
-    source.pose.position.x= -0.16855652402671312
-    source.pose.position.y= 0.4269696256103897
-    source.pose.position.z= 0.17953726983166396
+    source.pose.position.x= -0.1459666759818
+    source.pose.position.y= 0.44413490874625117
+    source.pose.position.z= 0.26072406073113086
     source.pose.orientation.x = 0.9653943031274262
     source.pose.orientation.y = -0.2607581565937913
     source.pose.orientation.z = -0.004191010953791741

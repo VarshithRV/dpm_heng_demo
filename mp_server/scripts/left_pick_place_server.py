@@ -135,16 +135,16 @@ class Motion_planner:
         end.pose.position.y += PADDING_Y
         end.pose.position.z += PADDING_Z
 
-        start.pose.orientation.x= -0.6616999071882411
-        start.pose.orientation.y= 0.7497530177608279
-        start.pose.orientation.z= -0.0005646905747994222
-        start.pose.orientation.w= 0.004829731893122736
+        start.pose.orientation.x= -0.023150661836219867
+        start.pose.orientation.y= 0.9997169903287241
+        start.pose.orientation.z= 0.0025923396063650384
+        start.pose.orientation.w= 0.004823471777477282
 
 
-        end.pose.orientation.x= -0.6616999071882411
-        end.pose.orientation.y= 0.7497530177608279
-        end.pose.orientation.z= -0.0005646905747994222
-        end.pose.orientation.w= 0.004829731893122736
+        end.pose.orientation.x= -0.023150661836219867
+        end.pose.orientation.y= 0.9997169903287241
+        end.pose.orientation.z= 0.0025923396063650384
+        end.pose.orientation.w= 0.004823471777477282
 
         # start and end pose are configured with 0 linear transformation and fixed orientation
 
@@ -186,7 +186,7 @@ class Motion_planner:
         waypoints = []
         current_pose = self.move_group.get_current_pose().pose
         prepick2 = copy.deepcopy(pick_pose.pose)
-        prepick2.orientation = start.orientation
+        prepick2.orientation = start.pose.orientation
         prepick2.position.z = pick_place_height
         waypoints.append(copy.deepcopy(current_pose))
         waypoints.append(copy.deepcopy(prepick2))
@@ -195,7 +195,7 @@ class Motion_planner:
 
         waypoints = []
         pick = copy.deepcopy(pick_pose.pose)
-        pick.orientation = start.orientation
+        pick.orientation = start.pose.orientation
         waypoints.append(copy.deepcopy(pick))
         self.execute_waypoints(waypoints) # here it as at pick at the same position as the one provided in the client
 

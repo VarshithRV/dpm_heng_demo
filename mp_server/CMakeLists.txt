@@ -167,7 +167,7 @@ include_directories(
 catkin_install_python(PROGRAMS
   scripts/left_move_preaction_server.py scripts/right_move_preaction_server.py scripts/move_preaction_sample_client.py
   scripts/left_pick_place_server.py scripts/right_pick_place_server.py scripts/pick_place_sample_client.py
-  scripts/right_pick_place_server.py
+  scripts/right_pick_place_server.py scripts/right_clean_server.py 
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
